@@ -65,12 +65,21 @@ fun getHorario2Disciplina[r:Reserva]: Horario {
 	r.disciplina.horario2
 }
 
+pred reservasPossuemMesmoLaboratorio[r1:Reserva, r2:Reserva] {
+	(r1.laboratorio = r2.laboratorio)
+}
+
+pred reservasPossuemPeloMenosUmHorarioIgual[r1:Reserva, r2:Reserva] {
+	(r1.h1 = r2.h1 or r1.h2 = r2.h2 or r1.h2 = r2.h1 or r1.h1 = r2.h2)
+}
+
 fact { 
 	some Pessoa
-	some Professor
-	some Disciplina
-	some Reserva
-	some ListaDeEspera
+	#Professor = 3
+	#Disciplina = 3
+	#Reserva = 3
+	#ListaDeEspera = 2
+
 }
 
 fact {
@@ -106,7 +115,20 @@ fact {
 	all l:ListaDeEspera, r:Reserva | ((ehProfessor[l.pessoa]) and (PossuemUmHorarioIgual[l, r]))
 		implies (ehProfessor[r.pessoa])
 	
-}
+      all r:Reserva | (ehProfessor[r.pessoa]) implies (r.disciplina in r.pessoa.disciplinas) 
+
+	all r1:(Reserva - ListaDeEspera), r2:(Reserva - ListaDeEspera) | (r1 != r2) implies (not (reservasPossuemMesmoLaboratorio[r1, r2] and
+		 reservasPossuemPeloMenosUmHorarioIgual[r1, r2]))
+
+	//Perguntar ao Massoni sobre quantidade de professores por disciplina
+	all d:Disciplina | #disciplinas.d = 1
+
+	//all l:ListaDeEspera | some r1:Reserva - (ListaDeEspera), r2:Reserva - (ListaDeEspera) | 
+	//		reservasPossuemPeloMenosUmHorarioIgual[l, r1] and
+	//       	reservasPossuemPeloMenosUmHorarioIgual[l, r2] and
+	//		r1.laboratorio != r2.laboratorio
+	
+}	
 
 assert propriedades{
 	all r:Reserva | (ehProfessor[r.pessoa]) implies (some r.disciplina)
