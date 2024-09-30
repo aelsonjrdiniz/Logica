@@ -30,7 +30,7 @@ abstract sig Hora{}
 
 one sig h8_10, h10_12, h14_16, h16_18 extends Hora{}
 
-sig Reserva{
+abstract sig Solicitacao {
 	pessoa:Pessoa,
 	laboratorio:Laboratorio,
 	h1:Horario,
@@ -38,14 +38,16 @@ sig Reserva{
 	disciplina: set Disciplina
 }
 
-sig ListaDeEspera extends Reserva{}
+sig Reserva extends Solicitacao{}
+
+sig ListaDeEspera extends Solicitacao{}
 
 pred ehProfessor[p:Pessoa] {
 	p in Professor
 }
 
-pred PossuemUmHorarioIgual[r1:Reserva, r2:Reserva] {
-	(horariosSaoIguais[r1.h1, r2.h1]) or (horariosSaoIguais[r1.h2, r2.h2])
+pred solicitacoesPossuemUmHorarioIgual[s1:Solicitacao, s2:Solicitacao] {
+	(s1.h1 = s2.h1) or (s1.h1 = s2.h2) or (s1.h2 = s2.h2) or (s1.h2 = s2.h1) 
 }
 
 pred horariosSaoIguais[h1:Horario, h2:Horario] {
@@ -56,37 +58,38 @@ pred disciplinaPossuiMesmoDia[h1:Horario, h2:Horario] {
 	h1.dia = h2.dia
 }
 
-fun getHorario1Disciplina[r:Reserva]: Horario {
-	r.disciplina.horario1
+pred solicitacoesPossuemMesmoLaboratorio[s1:Solicitacao, s2:Solicitacao] {
+	(s1.laboratorio = s2.laboratorio)
 }
 
-fun getHorario2Disciplina[r:Reserva]: Horario {
-	r.disciplina.horario2
+fun getPrimeiroHorarioDisciplina[s:Solicitacao]: Horario {
+	s.disciplina.horario1
 }
 
-pred reservasPossuemMesmoLaboratorio[r1:Reserva, r2:Reserva] {
-	(r1.laboratorio = r2.laboratorio)
+fun getSegundoHorarioDisciplina[s:Solicitacao]: Horario {
+	s.disciplina.horario2
 }
 
-pred reservasPossuemPeloMenosUmHorarioIgual[r1:Reserva, r2:Reserva] {
-	(r1.h1 = r2.h1 or r1.h2 = r2.h2 or r1.h2 = r2.h1 or r1.h1 = r2.h2)
+fun getDisciplinasDoProfessor[p:Professor]: set Disciplina {
+	p.disciplinas
 }
 
 fact { 
 	some Pessoa
+	no (Pessoa - Professor)
 	some Professor
-	some Disciplina
-	#Reserva > 3
-	#ListaDeEspera > 1
+	some Solicitacao
+	#Horario > 2
+	#Reserva > 0
+	#ListaDeEspera > 0
 }
 
 fact {
-	//Não é possível que hajam menos disciplinas do que professores
-	#Disciplina = #Professor
-	all p:Professor | #p.disciplinas > 0
+	// Não é possível que hajam menos disciplinas do que professores
+	#Disciplina >= #Professor
 
-    	// não pode haver 2 horarios com o mesmo dia e hora
-    	all h1: Horario, h2 : Horario | h1 != h2 implies not(h1.dia = h2.dia and h1.hora = h2.hora)
+	//Não podem haver 2 objetos da classe horário exatamente iguais
+	all h1:Horario, h2:Horario | (h1 != h2) implies (not horariosSaoIguais[h1, h2])
 
 	// Uma disciplina não pode ter 2 aulas no mesmo dia
 	all d:Disciplina |  (not disciplinaPossuiMesmoDia[d.horario1, d.horario2])
@@ -94,51 +97,53 @@ fact {
 	// Não é possível que uma disciplina possua 2 horários iguais
 	all d:Disciplina | not horariosSaoIguais[d.horario1, d.horario2]
 
-	// A reserva possuirá 2 horários distintos se, e somente se, ela tiver sido feita por
+	// Qualquer solicitação possuirá 2 horários distintos se, e somente se, ela tiver sido feita por
 	// um professor
-	all r:Reserva | (ehProfessor[r.pessoa]) <=> (not horariosSaoIguais[r.h1, r.h2])
+	all s:Solicitacao | (ehProfessor[s.pessoa]) <=> (not horariosSaoIguais[s.h1, s.h2])
 	
-	// Caso a reserva seja feita por um professor, ela possuirá 1 disciplina associada
-	all r:Reserva | (ehProfessor[r.pessoa]) implies (#r.disciplina = 1)
+	// Caso a solicitação seja feita por um professor, ela possuirá 1 disciplina associada e
+	// essa disciplina será obrigatoriamente uma das que o professor leciona
+	all s:Solicitacao | (ehProfessor[s.pessoa]) implies ((#s.disciplina = 1) and 
+		(s.disciplina in getDisciplinasDoProfessor[s.pessoa]))
 
-	//Caso a reserva não seja feita por um professor, não haverá nenhuma disciplina associada
-	all r:Reserva | (not ehProfessor[r.pessoa]) implies (#r.disciplina = 0)
+	//Caso a solicitação não seja feita por um professor, não haverá nenhuma disciplina associada
+	all s:Solicitacao | (not ehProfessor[s.pessoa]) implies (#s.disciplina = 0)
 
-	// Caso a reserva seja feita por um professor, os horários das reservas devem 
+	// Caso a solicitação seja feita por um professor, os horários das reservas devem 
 	// ser iguais aos horários da disciplina associada à reserva
 
-	all r:Reserva | (ehProfessor[r.pessoa]) 
-		implies (horariosSaoIguais[getHorario1Disciplina[r], r.h1])
-	all r:Reserva | (ehProfessor[r.pessoa]) 
-		implies (horariosSaoIguais[getHorario2Disciplina[r], r.h2])
+	all s:Solicitacao | (ehProfessor[s.pessoa]) 
+		implies (horariosSaoIguais[getPrimeiroHorarioDisciplina[s], s.h1])
+	all s:Solicitacao | (ehProfessor[s.pessoa]) 
+		implies (horariosSaoIguais[getSegundoHorarioDisciplina[s], s.h2])
 
 	//Professores têm preferência na reserva
-	all l:ListaDeEspera, r:Reserva | ((ehProfessor[l.pessoa]) and (PossuemUmHorarioIgual[l, r]))
+	all l:ListaDeEspera, r:Reserva | ((ehProfessor[l.pessoa]) and (solicitacoesPossuemUmHorarioIgual[l, r]))
 		implies (ehProfessor[r.pessoa])
 	
-    all r:Reserva | (ehProfessor[r.pessoa]) implies (r.disciplina in r.pessoa.disciplinas) 
+	//Não podem haver 2 reservas no mesmo horário no mesmo laboratório
+	all r1:Reserva, r2:Reserva | (r1 != r2) implies (not (solicitacoesPossuemUmHorarioIgual[r1, r2] and
+		(solicitacoesPossuemMesmoLaboratorio[r1, r2])))
 
-	all r1:Reserva - (ListaDeEspera), r2:Reserva - (ListaDeEspera) | (r1 != r2) implies (not (reservasPossuemMesmoLaboratorio[r1, r2] and
-		 reservasPossuemPeloMenosUmHorarioIgual[r1, r2]))
+	//Perguntar ao Massoni sobre quantidade de professores por disciplina
+	all d:Disciplina | #disciplinas.d > 0
 
-	// Perguntar ao Massoni sobre quantidade de professores por disciplina
-	all d:Disciplina | #disciplinas.d = 1
+	//Não existirá uma lista de espera em um horário livre
+	all l:ListaDeEspera | one r1:Reserva, r2:Reserva | (solicitacoesPossuemUmHorarioIgual[l,r1])
+		and (solicitacoesPossuemUmHorarioIgual[l, r2]) and r1.laboratorio = Lcc1
+			and r2.laboratorio = Lcc2
 
-	all l: ListaDeEspera | 
-        some r1: Reserva - (ListaDeEspera), r2: Reserva - (ListaDeEspera) | 
-            reservasPossuemPeloMenosUmHorarioIgual[l, r1] and
-            reservasPossuemPeloMenosUmHorarioIgual[l, r2] and
-            r1.laboratorio != r2.laboratorio
-
-            
-
-}	
-
-assert propriedades{
-	all r:Reserva | (ehProfessor[r.pessoa]) implies (some r.disciplina)
-	all r:Reserva | (not ehProfessor[r.pessoa]) implies (no r.disciplina)
-    
+	//Uma pessoa não pode ter 2 solicitações no mesmo horário
+	all s1:Solicitacao, s2:Solicitacao | (s1.pessoa = s2.pessoa and s1 != s2) implies
+		(not solicitacoesPossuemUmHorarioIgual[s1, s2])
 }
 
-run{} for 10
+assert propriedades{
+	all s:Solicitacao | (ehProfessor[s.pessoa]) implies (some s.disciplina)
+	all s:Solicitacao | (not ehProfessor[s.pessoa]) implies (no s.disciplina)
+	#Reserva = 1 implies #ListaDeEspera = 0
+	
+} 
+
+run{}
 ```
