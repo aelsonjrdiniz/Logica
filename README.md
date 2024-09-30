@@ -1,3 +1,4 @@
+```als
 sig Pessoa{}
 
 // Todo professor possuirá um conjunto de disciplinas associadas a ele
@@ -84,8 +85,8 @@ fact {
 	#Disciplina = #Professor
 	all p:Professor | #p.disciplinas > 0
 
-    // não pode haver 2 horarios com o mesmo dia e hora
-    all h1: Horario, h2 : Horario | h1 != h2 implies not(h1.dia = h2.dia and h1.hora = h2.hora)
+    	// não pode haver 2 horarios com o mesmo dia e hora
+    	all h1: Horario, h2 : Horario | h1 != h2 implies not(h1.dia = h2.dia and h1.hora = h2.hora)
 
 	// Uma disciplina não pode ter 2 aulas no mesmo dia
 	all d:Disciplina |  (not disciplinaPossuiMesmoDia[d.horario1, d.horario2])
@@ -140,3 +141,4 @@ assert propriedades{
 }
 
 run{} for 10
+```
