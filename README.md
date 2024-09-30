@@ -1,5 +1,3 @@
-# Logica
-
 sig Pessoa{}
 
 // Todo professor possuirá um conjunto de disciplinas associadas a ele
@@ -75,17 +73,19 @@ pred reservasPossuemPeloMenosUmHorarioIgual[r1:Reserva, r2:Reserva] {
 
 fact { 
 	some Pessoa
-	#Professor = 3
-	#Disciplina = 3
-	#Reserva = 3
-	#ListaDeEspera = 2
-
+	some Professor
+	some Disciplina
+	#Reserva > 3
+	#ListaDeEspera > 1
 }
 
 fact {
-	// Não é possível que hajam menos disciplinas do que professores
-	#Disciplina >= #Professor
+	//Não é possível que hajam menos disciplinas do que professores
+	#Disciplina = #Professor
 	all p:Professor | #p.disciplinas > 0
+
+    // não pode haver 2 horarios com o mesmo dia e hora
+    all h1: Horario, h2 : Horario | h1 != h2 implies not(h1.dia = h2.dia and h1.hora = h2.hora)
 
 	// Uma disciplina não pode ter 2 aulas no mesmo dia
 	all d:Disciplina |  (not disciplinaPossuiMesmoDia[d.horario1, d.horario2])
@@ -115,25 +115,28 @@ fact {
 	all l:ListaDeEspera, r:Reserva | ((ehProfessor[l.pessoa]) and (PossuemUmHorarioIgual[l, r]))
 		implies (ehProfessor[r.pessoa])
 	
-      all r:Reserva | (ehProfessor[r.pessoa]) implies (r.disciplina in r.pessoa.disciplinas) 
+    all r:Reserva | (ehProfessor[r.pessoa]) implies (r.disciplina in r.pessoa.disciplinas) 
 
-	all r1:(Reserva - ListaDeEspera), r2:(Reserva - ListaDeEspera) | (r1 != r2) implies (not (reservasPossuemMesmoLaboratorio[r1, r2] and
+	all r1:Reserva - (ListaDeEspera), r2:Reserva - (ListaDeEspera) | (r1 != r2) implies (not (reservasPossuemMesmoLaboratorio[r1, r2] and
 		 reservasPossuemPeloMenosUmHorarioIgual[r1, r2]))
 
-	//Perguntar ao Massoni sobre quantidade de professores por disciplina
+	// Perguntar ao Massoni sobre quantidade de professores por disciplina
 	all d:Disciplina | #disciplinas.d = 1
 
-	//all l:ListaDeEspera | some r1:Reserva - (ListaDeEspera), r2:Reserva - (ListaDeEspera) | 
-	//		reservasPossuemPeloMenosUmHorarioIgual[l, r1] and
-	//       	reservasPossuemPeloMenosUmHorarioIgual[l, r2] and
-	//		r1.laboratorio != r2.laboratorio
-	
+	all l: ListaDeEspera | 
+        some r1: Reserva - (ListaDeEspera), r2: Reserva - (ListaDeEspera) | 
+            reservasPossuemPeloMenosUmHorarioIgual[l, r1] and
+            reservasPossuemPeloMenosUmHorarioIgual[l, r2] and
+            r1.laboratorio != r2.laboratorio
+
+            
+
 }	
 
 assert propriedades{
 	all r:Reserva | (ehProfessor[r.pessoa]) implies (some r.disciplina)
 	all r:Reserva | (not ehProfessor[r.pessoa]) implies (no r.disciplina)
-
+    
 }
 
-run{}
+run{} for 10
