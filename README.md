@@ -62,6 +62,16 @@ pred solicitacoesPossuemMesmoLaboratorio[s1:Solicitacao, s2:Solicitacao] {
 	(s1.laboratorio = s2.laboratorio)
 }
 
+pred pessoaFezEsseSolicitacao[p: Pessoa, s: Solicitacao]{
+	s.pessoa = p
+}
+pred solicitacaoNesseHorario[h: Horario, s: Solicitacao]{
+	s.h1 = h or s.h2 = h
+}
+pred diasSaoIguais[d1: Dia, d2: Dia]{
+	d1 = d2
+}
+
 fun getPrimeiroHorarioDisciplina[s:Solicitacao]: Horario {
 	s.disciplina.horario1
 }
@@ -76,7 +86,6 @@ fun getDisciplinasDoProfessor[p:Professor]: set Disciplina {
 
 fact { 
 	some Pessoa
-	no (Pessoa - Professor)
 	some Professor
 	some Solicitacao
 	#Horario > 2
@@ -100,7 +109,7 @@ fact {
 	// Qualquer solicitação possuirá 2 horários distintos se, e somente se, ela tiver sido feita por
 	// um professor
 	all s:Solicitacao | (ehProfessor[s.pessoa]) <=> (not horariosSaoIguais[s.h1, s.h2])
-	
+
 	// Caso a solicitação seja feita por um professor, ela possuirá 1 disciplina associada e
 	// essa disciplina será obrigatoriamente uma das que o professor leciona
 	all s:Solicitacao | (ehProfessor[s.pessoa]) implies ((#s.disciplina = 1) and 
@@ -125,7 +134,7 @@ fact {
 	all r1:Reserva, r2:Reserva | (r1 != r2) implies (not (solicitacoesPossuemUmHorarioIgual[r1, r2] and
 		(solicitacoesPossuemMesmoLaboratorio[r1, r2])))
 
-	//Perguntar ao Massoni sobre quantidade de professores por disciplina
+	//Toda disciplina tem que ter um professor associado
 	all d:Disciplina | #disciplinas.d > 0
 
 	//Não existirá uma lista de espera em um horário livre
@@ -136,14 +145,20 @@ fact {
 	//Uma pessoa não pode ter 2 solicitações no mesmo horário
 	all s1:Solicitacao, s2:Solicitacao | (s1.pessoa = s2.pessoa and s1 != s2) implies
 		(not solicitacoesPossuemUmHorarioIgual[s1, s2])
+
+	// toda pessoa deve haver uma solicitação
+	all p: Pessoa | some s: Solicitacao | pessoaFezEsseSolicitacao[p,s]
+
+
 }
 
 assert propriedades{
 	all s:Solicitacao | (ehProfessor[s.pessoa]) implies (some s.disciplina)
 	all s:Solicitacao | (not ehProfessor[s.pessoa]) implies (no s.disciplina)
+	
 	#Reserva = 1 implies #ListaDeEspera = 0
 	
 } 
 
-run{}
+run{} for 5
 ```
