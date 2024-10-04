@@ -145,7 +145,7 @@ assert propriedades{
 		and (possuemUmHorarioIgual[l, r2]) and r1.laboratorio = Lcc1
 			and r2.laboratorio = Lcc2
 
-	// Apenas professores podema associar disciplinas na reserva
+	// Apenas professores podem associar disciplinas na reserva
 	all s:Solicitacao | (s.pessoa not in Professor) implies #s.disciplina = 0
 	
 	// Apenas professores podem ter 2 horários na mesma reserva
