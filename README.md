@@ -68,7 +68,12 @@ pred horarioEstaOcupado[l:ListaDeEspera, r1:Reserva, r2:Reserva] {
 		and r1.laboratorio = Lcc1	and r2.laboratorio = Lcc2
 }
 
-fun getDisciplinasDoProfessor[p:Professor]: set Disciplina {
+pred horariosConflitam[d1:Disciplina, d2:Disciplina] {
+	d1.horario1 = d2.horario1 or d1.horario2 = d2.horario2 or d1.horario1 = d2.horario2
+		or d1.horario2 = d2.horario1
+}
+
+fun disciplinasDoProfessor[p:Professor]: set Disciplina {
 	p.disciplinas
 }
 
@@ -82,6 +87,11 @@ fact {
 
 	//Não existe disciplina sem professor
 	all d:Disciplina | #disciplinas.d > 0
+	
+	//Um professor não pode dar 2 ou mais disciplinas no mesmo horário
+	all p:Professor, d1:Disciplina, d2:Disciplina | 
+		(d1 in disciplinasDoProfessor[p] and d2 in disciplinasDoProfessor[p] and d1 != d2) =>			
+			not horariosConflitam[d1, d2]		
 
 }
 
@@ -98,7 +108,7 @@ fact {
 	// Caso a solicitação seja feita por um professor, ela possuirá 1 disciplina associada e
 	// essa disciplina será obrigatoriamente uma das que o professor leciona
 	all s:Solicitacao | (ehProfessor[s.pessoa]) implies ((#s.disciplina = 1) and 
-		(s.disciplina in getDisciplinasDoProfessor[s.pessoa]))
+		(s.disciplina in disciplinasDoProfessor[s.pessoa]))
 
 	//Caso a solicitação não seja feita por um professor, não haverá nenhuma disciplina associada
 	all s:Solicitacao | (not ehProfessor[s.pessoa]) implies (#s.disciplina = 0)
@@ -126,7 +136,7 @@ assert propriedades{
 	no p:Professor | some s:Solicitacao | #p.disciplinas = 0 and p in s.pessoa
 
 	//Não existe uma solicitação com 2 horários no mesmo dia
-	all s:Solicitacao | some h1:s.horarios, h2:s.horarios | 	(#s.horarios = 2 and h1 != h2) implies 
+	all s:Solicitacao | some h1:s.horarios, h2:s.horarios | (#s.horarios = 2 and h1 != h2) implies 
 		(h1.dia != h2.dia)
 
 	//Não existe uma lista de espera para um dos laboratórios em um horário caso
@@ -147,6 +157,7 @@ assert propriedades{
 
 } 
 
-//check propriedades
-run{} for 5
+check propriedades
+//run{} for 5
+
 ```
